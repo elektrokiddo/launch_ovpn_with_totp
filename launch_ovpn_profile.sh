@@ -2,7 +2,7 @@
 
 # Description
 # Need to import the ovpn-file in to NetworkManager
-# Needed tools: 
+# Needed tools:
 # - oathtool
 # - nmcli
 
@@ -16,18 +16,53 @@
 # of the password. nmcli command will open the stored connection and
 # thus establish the connection.
 
+[[ -z $1 ]] && exit 99
 
 # --- Konfiguration ---
 CONFIG_DIR="$HOME/.config/otp-manager"
-ACCOUNTS_FILE="$CONFIG_DIR/accounts.conf"
+ACCOUNT_FILE="$CONFIG_DIR/account_IAFN.conf"
 
-VPN_PROFILE=$(cat ${ACCOUNTS_FILE} | cut -d "|" -f1)
-SECRET=$(cat ${ACCOUNTS_FILE} | cut -d "|" -f2)
-PW_FIXED_PART=$(cat ${ACCOUNTS_FILE} | cut -d "|" -f3)
-USER_NAME=$(cat ${ACCOUNTS_FILE} | cut -d "|" -f4)
+CONF_STRING=$(sed -n '/^IAFN/p' ${ACCOUNT_FILE})
 
-# Calculate PIN from SECRET
-PIN=$(oathtool --base32 --totp "$SECRET" 2>/dev/null)
+# get config
+IFS='|' read -r VPN_PROFILE SECRET PW_FIXED_PART USER_NAME <<< "$CONF_STRING"
 
-# Launch VPN connection
-nmcli connection up ${VPN_PROFILE} passwd-file <(echo -e "vpn.secrets.username:${USER_NAME}\nvpn.secrets.password:${PW_FIXED_PART}${PIN}")
+check_profile_exists() {
+  if ! nmcli connection show "${VPN_PROFILE}" &>/dev/null; then
+    echo "VPN-Profil '${VPN_PROFILE}' nicht gefunden. Abbruch."
+    exit 1
+  fi
+}
+
+vpn_connect() {
+
+  check_profile_exists
+
+  # Check if VPN profile is active
+  if nmcli connection show --active | grep -q "^${VPN_PROFILE}"; then
+    echo "VPN-Verbindung '${VPN_PROFILE}' ist bereits aktiv. Keine Aktion..."
+  else
+    # Calculate PIN from SECRET
+    local PIN=$(oathtool --base32 --totp "$SECRET" 2>/dev/null)
+
+    # Launch VPN connection
+    # nmcli connection up ${VPN_PROFILE} passwd-file <(echo -e "vpn.secrets.username:${USER_NAME}\nvpn.secrets.password:${PW_FIXED_PART}${PIN}")
+    echo "CONNECT VPN"
+  fi
+}
+
+vpn_disconnect() {
+
+  check_profile_exists
+
+  # Check if VPN profile is active
+  if nmcli connection show --active | grep -q "^${VPN_PROFILE}"; then
+    echo "Trenne VPN-Verbindung '${VPN_PROFILE}'..."
+    nmcli connection down "${VPN_PROFILE}"
+  else
+    echo "VPN-Profil '${VPN_PROFILE}' ist nicht aktiv."
+  fi
+}
+
+[[ "$1" == "connect" ]] && vpn_connect
+[[ "$1" == "disconnect" ]] && vpn_disconnect
