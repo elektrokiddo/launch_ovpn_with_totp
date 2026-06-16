@@ -60,8 +60,8 @@ nmcli connection modify "Alter Name" connection.id IAFN
 ## Skript installieren
 
 ```bash
-chmod +x otp-vpn.sh
-sudo cp otp-vpn.sh /usr/local/bin/otp-vpn
+chmod +x launch_ovpn_profile.sh
+sudo cp launch_ovpn_profile.sh ~/.local/bin/otp-vpn.sh
 ```
 
 ---
@@ -70,12 +70,12 @@ sudo cp otp-vpn.sh /usr/local/bin/otp-vpn
 
 **VPN verbinden:**
 ```bash
-otp-vpn connect
+otp-vpn.sh connect
 ```
 
 **VPN trennen:**
 ```bash
-otp-vpn disconnect
+otp-vpn.sh disconnect
 ```
 
 ---
